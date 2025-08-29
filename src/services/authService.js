@@ -23,8 +23,8 @@ export const authService = {
             }
 
             const data = await response.json();
-            localStorage.setItem(TOKEN_KEY, data.token);
-            localStorage.setItem(USER_KEY, JSON.stringify(data));
+            localStorage.setItem(TOKEN_KEY, data.token); // Här sparas token i localStorage (ett minne i webbläsaren) under nyckeln 'auth_token'.
+            localStorage.setItem(USER_KEY, JSON.stringify(data)); // Här sparas all data från response (header, body etc.) under nyckeln 'auth_user' i localStorage.
 
             return data;
         } catch (error) {

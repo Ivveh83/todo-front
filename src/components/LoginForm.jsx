@@ -29,7 +29,7 @@ const LoginForm = () => {
         setError('');
 
         try {
-            await login(formData.username, formData.password);
+            await login(formData.username, formData.password); // authServices.login() gör att token och all data som finns i dto/AuthResponseDto sparas i localStorage. 
             navigate('/dashboard');
         } catch (err) {
             setError(err.message || 'An error occurred. Please try again.');

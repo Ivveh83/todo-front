@@ -1,1 +1,22 @@
 //*todo: implement taskService and call the API
+import axios from "axios";
+
+const TOKEN_KEY = 'auth_token';
+const USER_KEY = 'auth_user';
+const API_URL = 'http://localhost:9090/api';
+
+export const taskService = {
+
+    getAllTodos: async () => {
+        try{
+            const token = localStorage.getItem(TOKEN_KEY);
+            const response = await axios.get(`${API_URL}/todo`, { headers: { Authorization: `Bearer ${token}` } });
+            if(response.status === 200) {
+                return response.data;
+            }
+        }catch(error) {
+            console.log("Error fetching All Todos: ", error);
+        }
+    }
+    }
+
