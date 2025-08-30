@@ -10,16 +10,25 @@ const Task = () => {
   const [tasks, setTasks] = useState();
 
   useEffect(() => {
-    const fetchAllTodos = async () => {
-        try {
-      const data = await taskService.getAllTodos();
-      console.log("data: ", data);
-      setTasks(data);
-      } catch (error) {
-        console.error("Error in useEffect", error);
-      }
-    };
-    fetchAllTodos();
+    const fetchAllTodosWithRespectiveUser = async () => {
+  try {
+    const data = await taskService.getAllTodos();
+
+    const tasksWithAssignee = await Promise.all(
+      data.map(async (task) => ({
+        ...task,
+        assignee: await taskService.getPersonById(task.personId)
+      }))
+    );
+
+    setTasks(tasksWithAssignee);
+    console.log("Tasks: ", tasksWithAssignee)
+  } catch (error) {
+    console.error("Error fetching Todos:", error);
+  }
+};
+fetchAllTodosWithRespectiveUser();
+
   }, []);
 
   {
@@ -189,7 +198,7 @@ const Task = () => {
                                 </small>
                                 <span className="badge bg-info me-2">
                                   <i className="bi bi-person"></i>{" "}
-                                  {task.personId}
+                                  {task.assignee.name}
                                 </span>
                                 <span className="badge bg-warning text-dark me-2">
                                   {task.completed ? "Completed" : "Pending"}

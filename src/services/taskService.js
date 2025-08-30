@@ -17,6 +17,17 @@ export const taskService = {
         }catch(error) {
             console.log("Error fetching All Todos: ", error);
         }
-    }
+    },
+    getPersonById: async (id) => {
+        try{
+            const token = localStorage.getItem(TOKEN_KEY);
+            const response = await axios.get(`${API_URL}/person/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+            if(response.status === 200) {
+                return response.data;
+            }
+        }catch(error) {
+            console.log("Error fetching Person By Id: ", error);
+        }
+        },
     }
 
