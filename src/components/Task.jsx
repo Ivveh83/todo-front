@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import "./Task.css";
 import Sidebar from "./Sidebar";
 import Header from "./Header.jsx";
@@ -7,62 +8,59 @@ import { taskService } from "../services/taskService.js";
 const Task = () => {
   // todo*: make this component functional by implementing state management and API calls
 
-  const [tasks, setTasks] = useState();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm({
+    defaultValues: {
+      title: "",
+      description: "",
+      dueDate: "",
+    },
+  });
+
+  const onSubmit = (data) => {
+    // hämta data
+    //eventuellt strukturera och mappa data
+    console.log("Before: ", { ...data });
+    data.completed = true;
+    data.createdAt = new Date().toISOString();
+    //data.personId = data.personId.value; // Byt ut till interaktiv funktionallitet senare
+    data.numberOfAttachments = data.numberOfAttachments.length;
+    console.log("After: ", data);
+    //Skicka vidare data till backend
+    taskService.createTodo(data);
+    // Reset form fields after submission
+    reset();
+    setUpdateTasks(!updateTasks);
+  };
+
+  const [tasks, setTasks] = useState([]);
+  const [updateTasks, setUpdateTasks] = useState(false);
 
   useEffect(() => {
     const fetchAllTodosWithRespectiveUser = async () => {
-  try {
-    const data = await taskService.getAllTodos();
+      try {
+        const data = await taskService.getAllTodos();
 
-    const tasksWithAssignee = await Promise.all(
-      data.map(async (task) => ({
-        ...task,
-        assignee: await taskService.getPersonById(task.personId)
-      }))
-    );
+        const tasksWithAssignee = await Promise.all(
+          data.map(async (task) => ({
+            ...task,
+            assignee: await taskService.getPersonById(task.personId),
+          }))
+        );
 
-    setTasks(tasksWithAssignee);
-    console.log("Tasks: ", tasksWithAssignee)
-  } catch (error) {
-    console.error("Error fetching Todos:", error);
-  }
-};
-fetchAllTodosWithRespectiveUser();
+        setTasks(tasksWithAssignee);
+        console.log("Tasks: ", tasksWithAssignee);
+      } catch (error) {
+        console.error("Error fetching Todos:", error);
+      }
+    };
+    fetchAllTodosWithRespectiveUser();
+  }, [updateTasks]);
 
-  }, []);
-
-  {
-    /*    const tasks = [
-  {
-    id: 1,
-    title: "Complete Project Documentation",
-    description: "Write comprehensive documentation for the new features",
-    createdAt: "2025-08-07",
-    dueDate: "2025-08-15",
-    personId: "Mehrdad Javan",
-    completed: "pending"
-  },
-  {
-    id: 2,
-    title: "Review Code Changes",
-    description: "Review and approve pending pull requests",
-    createdAt: "2025-08-06",
-    dueDate: "2025-08-09",
-    personId: "Simon Elbrink",
-    completed: "in-progress"
-  },
-  {
-    id: 3,
-    title: "Deploy Application Updates",
-    description: "Deploy the latest version to production",
-    createdAt: "2025-08-05",
-    dueDate: "2025-08-07",
-    personId: "Mehrdad Javan",
-    completed: "completed"
-  }
-]
-*/
-  }
   return (
     <div className="dashboard-layout">
       <Sidebar isOpen={false} onClose={() => {}} />
@@ -79,16 +77,19 @@ fetchAllTodosWithRespectiveUser();
               <div className="card shadow-sm task-form-section">
                 <div className="card-body">
                   <h2 className="card-title mb-4">Add New Task</h2>
-                  <form id="todoForm">
+                  <form id="todoForm" onSubmit={handleSubmit(onSubmit)}>
                     <div className="mb-3">
                       <label htmlFor="todoTitle" className="form-label">
                         Title
                       </label>
+                      <small className="text-danger">
+                        {errors.title && errors.title.message}&nbsp;
+                      </small>
                       <input
                         type="text"
                         className="form-control"
                         id="todoTitle"
-                        required
+                        {...register("title", { required: " is required" })}
                       />
                     </div>
                     <div className="mb-3">
@@ -99,6 +100,7 @@ fetchAllTodosWithRespectiveUser();
                         className="form-control"
                         id="todoDescription"
                         rows="3"
+                        {...register("description")}
                       ></textarea>
                     </div>
                     <div className="row">
@@ -110,18 +112,23 @@ fetchAllTodosWithRespectiveUser();
                           type="datetime-local"
                           className="form-control"
                           id="todoDueDate"
+                          {...register("dueDate")}
                         />
                       </div>
                       <div className="col-md-6 mb-3">
                         <label htmlFor="todoPerson" className="form-label">
                           Assign to Person
                         </label>
-                        <select className="form-select" id="todoPerson">
+                        <select
+                          className="form-select"
+                          id="todoPerson"
+                          {...register("personId")}
+                        >
                           <option value="">
                             -- Select Person (Optional) --
                           </option>
-                          <option value="1">Mehrdad Javan</option>
-                          <option value="2">Simon Elbrink</option>
+                          <option value="2">Mehrdad Javan</option>
+                          <option value="3">Simon Elbrink</option>
                         </select>
                       </div>
                     </div>
@@ -133,6 +140,7 @@ fetchAllTodosWithRespectiveUser();
                           className="form-control"
                           id="todoAttachments"
                           multiple
+                          {...register("numberOfAttachments")}
                         />
                         <button
                           className="btn btn-outline-secondary"
@@ -185,7 +193,10 @@ fetchAllTodosWithRespectiveUser();
                               <div className="d-flex justify-content-between">
                                 <h6 className="mb-1">{task.title}</h6>
                                 <small className="text-muted ms-2">
-                                  Created: {task.createdAt.slice(0,10)}
+                                  Created:{" "}
+                                  {task.createdAt
+                                    ? task.createdAt.slice(0, 10)
+                                    : "Undefined"}
                                 </small>
                               </div>
                               <p className="mb-1 text-muted small">
@@ -194,13 +205,21 @@ fetchAllTodosWithRespectiveUser();
                               <div className="d-flex align-items-center flex-wrap">
                                 <small className="text-muted me-2">
                                   <i className="bi bi-calendar-event"></i> Due:{" "}
-                                  {task.dueDate.slice(0,10)}
+                                  {task.dueDate
+                                    ? task.dueDate.slice(0, 10)
+                                    : "Undefined"}
                                 </small>
                                 <span className="badge bg-info me-2">
                                   <i className="bi bi-person"></i>{" "}
-                                  {task.assignee.name}
+                                  {task.assignee?.name || "Unassigned"}
                                 </span>
-                                <span className="badge bg-warning text-dark me-2">
+                                <span
+                                  className={`badge me-2 ${
+                                    task.completed
+                                      ? "bg-success"
+                                      : "bg-warning text-dark"
+                                  }`}
+                                >
                                   {task.completed ? "Completed" : "Pending"}
                                 </span>
                               </div>

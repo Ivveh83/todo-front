@@ -29,5 +29,16 @@ export const taskService = {
             console.log("Error fetching Person By Id: ", error);
         }
         },
+    createTodo: async (data) => {
+        try{
+            const token = localStorage.getItem(TOKEN_KEY);
+            const response = await axios.post(`${API_URL}/todo`, data, { headers: { Authorization: `Bearer ${token}` } });
+            if(response.status === 201) {
+                return response.data
+            }
+        }catch(error) {
+            console.log("Error creating Todo", error)
+        }
+    },
     }
 
