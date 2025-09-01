@@ -21,24 +21,42 @@ const Task = () => {
     },
   });
 
-  const onSubmit = (data) => {
+  const onSubmit = async (data) => {
     // hämta data
-    //eventuellt strukturera och mappa data
+    //lägg till ytterligare poster i data
     console.log("Before: ", { ...data });
-    data.completed = true;
-    data.createdAt = new Date().toISOString();
-    //data.personId = data.personId.value; // Byt ut till interaktiv funktionallitet senare
     data.numberOfAttachments = data.numberOfAttachments.length;
+    if (taskToEdit) {
+      data.updatedAt = new Date().toISOString();
+      await taskService.updateTodo(data);
+      setTaskToEdit(null);
+    } else {
+      data.completed = false;
+      data.createdAt = new Date().toISOString();
+      await taskService.createTodo(data);
+    }
+    console.log("Reset without taskToEdit");
+    reset({
+      title: "",
+      description: "",
+      dueDate: "",
+      personId: "",
+      numberOfAttachments: [],
+    });
     console.log("After: ", data);
-    //Skicka vidare data till backend
-    taskService.createTodo(data);
-    // Reset form fields after submission
-    reset();
     setUpdateTasks(!updateTasks);
   };
 
   const [tasks, setTasks] = useState([]);
   const [updateTasks, setUpdateTasks] = useState(false);
+  const [taskToEdit, setTaskToEdit] = useState(null);
+
+  useEffect(() => {
+    if (taskToEdit) {
+      console.log("Reset with taskToEdit");
+      reset(taskToEdit);
+    }
+  }, [taskToEdit, reset]);
 
   useEffect(() => {
     const fetchAllTodosWithRespectiveUser = async () => {
@@ -48,7 +66,9 @@ const Task = () => {
         const tasksWithAssignee = await Promise.all(
           data.map(async (task) => ({
             ...task,
-            assignee: await taskService.getPersonById(task.personId),
+            assignee: task.personId
+              ? await taskService.getPersonById(task.personId)
+              : {},
           }))
         );
 
@@ -152,9 +172,14 @@ const Task = () => {
                       <div className="file-list" id="attachmentPreview"></div>
                     </div>
                     <div className="d-grid gap-2 d-md-flex justify-content-md-end">
-                      <button type="submit" className="btn btn-primary">
+                      <button
+                        type="submit"
+                        className={`btn ${
+                          taskToEdit ? "btn-success" : "btn-primary"
+                        }`}
+                      >
                         <i className="bi bi-plus-lg me-2"></i>
-                        Add Task
+                        {taskToEdit ? "Update Task" : "Add Task"}
                       </button>
                     </div>
                   </form>
@@ -234,6 +259,7 @@ const Task = () => {
                               <button
                                 className="btn btn-outline-primary btn-sm"
                                 title="Edit"
+                                onClick={() => setTaskToEdit(task)}
                               >
                                 <i className="bi bi-pencil"></i>
                               </button>

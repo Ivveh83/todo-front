@@ -40,5 +40,16 @@ export const taskService = {
             console.log("Error creating Todo", error)
         }
     },
+    updateTodo: async (data) => {
+        try{
+            const token = localStorage.getItem(TOKEN_KEY);
+            const response = await axios.put(`${API_URL}/todo/${data.id}`, data, { headers: { Authorization: `Bearer ${token}` } });
+             if(response.status === 204) {
+                return response.data
+            }
+        }catch(error) {
+            console.log("Error creating Todo", error)
+        }
+    },
     }
 
