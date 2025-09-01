@@ -4,9 +4,21 @@ import "./Task.css";
 import Sidebar from "./Sidebar";
 import Header from "./Header.jsx";
 import { taskService } from "../services/taskService.js";
+import { authService } from "../services/authService.js";
 
 const Task = () => {
   // todo*: make this component functional by implementing state management and API calls
+
+  const currentUser = authService.getCurrentUser();
+  const isAdmin = authService.isAdmin(currentUser);
+
+  const defaultFormValues = {
+    title: "",
+    description: "",
+    dueDate: "",
+    personId: "",
+    numberOfAttachments: [],
+  };
 
   const {
     register,
@@ -14,11 +26,7 @@ const Task = () => {
     formState: { errors },
     reset,
   } = useForm({
-    defaultValues: {
-      title: "",
-      description: "",
-      dueDate: "",
-    },
+    defaultValues: defaultFormValues,
   });
 
   const onSubmit = async (data) => {
@@ -29,32 +37,27 @@ const Task = () => {
     if (taskToEdit) {
       data.updatedAt = new Date().toISOString();
       await taskService.updateTodo(data);
-      setTaskToEdit(null);
     } else {
       data.completed = false;
       data.createdAt = new Date().toISOString();
       await taskService.createTodo(data);
     }
     console.log("Reset without taskToEdit");
-    reset({
-      title: "",
-      description: "",
-      dueDate: "",
-      personId: "",
-      numberOfAttachments: [],
-    });
+    setTaskToEdit(null);
     console.log("After: ", data);
-    setUpdateTasks(!updateTasks);
+    setUpdateTaskList(!updateTaskList);
   };
 
   const [tasks, setTasks] = useState([]);
-  const [updateTasks, setUpdateTasks] = useState(false);
+  const [updateTaskList, setUpdateTaskList] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState(null);
 
   useEffect(() => {
     if (taskToEdit) {
       console.log("Reset with taskToEdit");
       reset(taskToEdit);
+    } else {
+      reset(defaultFormValues);
     }
   }, [taskToEdit, reset]);
 
@@ -79,7 +82,7 @@ const Task = () => {
       }
     };
     fetchAllTodosWithRespectiveUser();
-  }, [updateTasks]);
+  }, [updateTaskList]);
 
   return (
     <div className="dashboard-layout">
@@ -264,8 +267,17 @@ const Task = () => {
                                 <i className="bi bi-pencil"></i>
                               </button>
                               <button
-                                className="btn btn-outline-danger btn-sm"
+                                className={`btn btn-sm ${
+                                  isAdmin
+                                    ? "btn-outline-danger"
+                                    : "btn-secondary"
+                                }`}
                                 title="Delete"
+                                disabled={!isAdmin}
+                                onClick={async () => {
+                                  await taskService.deleteTodo(task.id);
+                                  setUpdateTaskList(!updateTaskList);
+                                }}
                               >
                                 <i className="bi bi-trash"></i>
                               </button>

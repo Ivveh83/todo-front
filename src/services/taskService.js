@@ -48,7 +48,18 @@ export const taskService = {
                 return response.data
             }
         }catch(error) {
-            console.log("Error creating Todo", error)
+            console.log("Error updating Todo", error)
+        }
+    },
+    deleteTodo: async (id) => {
+        try{
+            const token = localStorage.getItem(TOKEN_KEY);
+            const response = await axios.delete(`${API_URL}/todo/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+             if(response.status === 204) {
+                return response.data
+            }
+        }catch(error) {
+            console.log("Error deleting Todo", error)
         }
     },
     }
