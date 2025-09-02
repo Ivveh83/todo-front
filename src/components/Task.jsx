@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller  } from "react-hook-form";
 import "./Task.css";
 import Sidebar from "./Sidebar";
 import Header from "./Header.jsx";
@@ -17,7 +17,7 @@ const Task = () => {
     description: "",
     dueDate: "",
     personId: "",
-    numberOfAttachments: [],
+    attachments: [],
   };
 
   const {
@@ -25,26 +25,31 @@ const Task = () => {
     handleSubmit,
     formState: { errors },
     reset,
+    setValue,
+    watch,
+    control,
   } = useForm({
     defaultValues: defaultFormValues,
   });
 
+  const watchedFiles = watch("attachments", []);
+
   const onSubmit = async (data) => {
-    // hämta data
-    //lägg till ytterligare poster i data
     console.log("Before: ", { ...data });
-    data.numberOfAttachments = data.numberOfAttachments.length;
+    // Lägg till fält
+    data.numberOfAttachments = data.attachments?.length || 0;
+    console.log("data.numberOfAttachments: ", data.numberOfAttachments);
     if (taskToEdit) {
       data.updatedAt = new Date().toISOString();
       await taskService.updateTodo(data);
+      setTaskToEdit(null);
     } else {
       data.completed = false;
       data.createdAt = new Date().toISOString();
-      await taskService.createTodo(data);
+      await taskService.createTodo(data); // Om createTodo också behöver FormData, samma logik
     }
-    console.log("Reset without taskToEdit");
-    setTaskToEdit(null);
     console.log("After: ", data);
+    reset(defaultFormValues);
     setUpdateTaskList(!updateTaskList);
   };
 
@@ -131,11 +136,24 @@ const Task = () => {
                         <label htmlFor="todoDueDate" className="form-label">
                           Due Date
                         </label>
+                        <small className="text-danger">
+                          {errors.dueDate && errors.dueDate.message}&nbsp;
+                        </small>
                         <input
                           type="datetime-local"
                           className="form-control"
                           id="todoDueDate"
-                          {...register("dueDate")}
+                          {...register("dueDate", {
+                            validate: (value) => {
+                              const today = new Date();
+                              today.setHours(0, 0, 0, 0); // nollställ tid
+                              const selected = new Date(value);
+
+                              return (
+                                selected >= today || " cannot be in the past"
+                              );
+                            },
+                          })}
                         />
                       </div>
                       <div className="col-md-6 mb-3">
@@ -158,12 +176,24 @@ const Task = () => {
                     <div className="mb-3">
                       <label className="form-label">Attachments</label>
                       <div className="input-group mb-3">
-                        <input
-                          type="file"
-                          className="form-control"
-                          id="todoAttachments"
-                          multiple
-                          {...register("numberOfAttachments")}
+                        <Controller
+                          name="attachments"
+                          control={control}
+                          defaultValue={[]}
+                          render={({ field }) => (
+                            <>
+                              <input
+                                type="file"
+                                multiple
+                                className="form-control"
+                                onChange={(e) => {
+                                  const filesArray = Array.from(e.target.files);
+                                  field.onChange(filesArray); // uppdaterar RHF state korrekt
+                                  console.log("filesArray:", filesArray);
+                                }}
+                              />
+                            </>
+                          )}
                         />
                         <button
                           className="btn btn-outline-secondary"
