@@ -8,11 +8,11 @@ import { authService } from "../services/authService.js";
 
 const Task = () => {
   // todo*: make this component functional by implementing state management and API calls
-  // todo1: implement validation for attachments, max 5 items and each item max 2MB, and demonstrate ev. errors
+  // todo1: implement validation for attachments, max 5 items and each item max 2MB, and demonstrate ev. errors - DONE
   // toto1.1 Read about Controller element - DONE
-  // todo2: implement functionality to show each file in attachments with a delete button
+  // todo2: implement functionality to show each file in attachments - DONE
   // todo3: make dueDate optional - DONE
-  // todo4: reset attachment input after adding/updating task
+  // todo4: reset attachment input after adding/updating task - DONE
   // todo5: Rewrite logics to only make api call to fetchAllTodos when creating new todo, when updating todo, send api call to backend to update it in db, but
   // don't call api to fetchAllTodos again, instead update state, tasks, with that updated todo
 
@@ -196,8 +196,25 @@ const Task = () => {
                           name="attachments" // This will be the name for the Key in formState
                           control={control} // Connects Controller with useForm, kind of the same function register has
                           defaultValue={[]}
+                          rules={{
+                            validate: {
+                              maxFiles: (files) =>
+                                files.length <= 5 ||
+                                "You can upload max 5 files",
+                              maxSize: (files) => {
+                                const maxMB = 2;
+                                const tooLarge = files.some(
+                                  (file) => file.size / 1024 / 1024 > maxMB
+                                );
+                                return (
+                                  !tooLarge ||
+                                  `Each file must be max ${maxMB} MB`
+                                );
+                              },
+                            },
+                          }}
                           render={(
-                            { field } // Render creates a js-object, field, that has some fields (name and value, i.e. the key/value in formState)
+                            { field, fieldState } // Render creates a js-object, field, that has some fields (name and value, i.e. the key/value in formState)
                           ) => (
                             // and some methods to connect the input element to formState
                             <>
@@ -212,6 +229,9 @@ const Task = () => {
                                   console.log("filesArray:", filesArray);
                                 }}
                               />
+                              {fieldState.error && (
+        <small className="text-danger">{fieldState.error.message}</small>
+      )}
                             </>
                           )}
                         />
@@ -230,7 +250,7 @@ const Task = () => {
                                 key={index}
                                 className="list-group-item d-flex justify-content-between align-items-center"
                               >
-                                 {/* Display either if it's a real file from the input or metadata from backend  */}
+                                {/* Display either if it's a real file from the input or metadata from backend  */}
                                 {"name" in file
                                   ? `${file.name} (${(
                                       file.size /
@@ -242,7 +262,6 @@ const Task = () => {
                                       1024 /
                                       1024
                                     ).toFixed(2)} MB)`}
-                                
                               </li>
                             ))}
                           </ul>
