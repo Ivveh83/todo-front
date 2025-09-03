@@ -51,16 +51,16 @@ export const taskService = {
 
     const { attachments, ...dataWithoutFiles } = data;
 
-    // Skapa FormData
+    // Cerate FormData
     const formData = new FormData();
     
-    // Lägg till JSON-data som en Blob
+    // Add JSON-data as a Blob under "todo"
       formData.append(
         "todo",
         new Blob([JSON.stringify(dataWithoutFiles)], { type: "application/json" })
       );
 
-    // Lägg till filer
+    // Add "files"
     if (attachments?.length > 0) {
       attachments.forEach((file) => {
         formData.append("files", file);
@@ -70,7 +70,7 @@ export const taskService = {
     const response = await axios.post(`${API_URL}/todo`, formData, {
       headers: {
         Authorization: `Bearer ${token}`,
-        "Content-Type": "multipart/form-data", // Axios sätter detta automatiskt, men det skadar inte att vara explicit
+        "Content-Type": "multipart/form-data", // Axios sets this automatic, but it doesn't hurt to be explicit
       },
     });
 
@@ -90,16 +90,16 @@ export const taskService = {
       console.log("attachments length: ", attachments.length)
 
 
-      // Skapa FormData
+      // Create FormData
       const formData = new FormData();
 
-      // Lägg till JSON-data som en Blob
+      // Add JSON-data as a Blob under "todo"
       formData.append(
         "todo",
         new Blob([JSON.stringify(dataWithoutFiles)], { type: "application/json" })
       );
 
-      // Lägg till filer om de finns
+      // add "files" if exists
       if (
         attachments?.length > 0
       ) {
@@ -108,7 +108,7 @@ export const taskService = {
         }
       }
 
-      // Skicka PUT-förfrågan
+      // Send PUT-request
       const response = await axios.put(`${API_URL}/todo/${data.id}`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -149,4 +149,5 @@ export const taskService = {
       console.log("Error fetching Todos which are Overdue", error);
     }
   },
+  
 };

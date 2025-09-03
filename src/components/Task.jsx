@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { useForm, Controller  } from "react-hook-form";
+import React, { useEffect, useState, useRef } from "react";
+import { useForm, Controller } from "react-hook-form";
 import "./Task.css";
 import Sidebar from "./Sidebar";
 import Header from "./Header.jsx";
@@ -8,6 +8,13 @@ import { authService } from "../services/authService.js";
 
 const Task = () => {
   // todo*: make this component functional by implementing state management and API calls
+  // todo1: implement validation for attachments, max 5 items and each item max 2MB, and demonstrate ev. errors
+  // toto1.1 Read about Controller element - DONE
+  // todo2: implement functionality to show each file in attachments with a delete button
+  // todo3: make dueDate optional - DONE
+  // todo4: reset attachment input after adding/updating task
+  // todo5: Rewrite logics to only make api call to fetchAllTodos when creating new todo, when updating todo, send api call to backend to update it in db, but
+  // don't call api to fetchAllTodos again, instead update state, tasks, with that updated todo
 
   const currentUser = authService.getCurrentUser();
   const isAdmin = authService.isAdmin(currentUser);
@@ -19,6 +26,8 @@ const Task = () => {
     personId: "",
     attachments: [],
   };
+
+  const fileInputRef = useRef(null);
 
   const {
     register,
@@ -32,7 +41,7 @@ const Task = () => {
     defaultValues: defaultFormValues,
   });
 
-  const watchedFiles = watch("attachments", []);
+  const attachments = watch("attachments");
 
   const onSubmit = async (data) => {
     console.log("Before: ", { ...data });
@@ -46,10 +55,14 @@ const Task = () => {
     } else {
       data.completed = false;
       data.createdAt = new Date().toISOString();
-      await taskService.createTodo(data); // Om createTodo också behöver FormData, samma logik
+      await taskService.createTodo(data);
     }
     console.log("After: ", data);
     reset(defaultFormValues);
+    if (fileInputRef.current) {
+      //
+      fileInputRef.current.value = ""; // manually empties file input
+    }
     setUpdateTaskList(!updateTaskList);
   };
 
@@ -104,7 +117,9 @@ const Task = () => {
             <div className="col-md-8 mx-auto">
               <div className="card shadow-sm task-form-section">
                 <div className="card-body">
-                  <h2 className="card-title mb-4">Add New Task</h2>
+                  <h2 className="card-title mb-4">
+                    {taskToEdit ? "Update Task" : "Add New Task"}
+                  </h2>
                   <form id="todoForm" onSubmit={handleSubmit(onSubmit)}>
                     <div className="mb-3">
                       <label htmlFor="todoTitle" className="form-label">
@@ -145,6 +160,7 @@ const Task = () => {
                           id="todoDueDate"
                           {...register("dueDate", {
                             validate: (value) => {
+                              if (!value) return true;
                               const today = new Date();
                               today.setHours(0, 0, 0, 0); // nollställ tid
                               const selected = new Date(value);
@@ -177,18 +193,22 @@ const Task = () => {
                       <label className="form-label">Attachments</label>
                       <div className="input-group mb-3">
                         <Controller
-                          name="attachments"
-                          control={control}
+                          name="attachments" // This will be the name for the Key in formState
+                          control={control} // Connects Controller with useForm, kind of the same function register has
                           defaultValue={[]}
-                          render={({ field }) => (
+                          render={(
+                            { field } // Render creates a js-object, field, that has some fields (name and value, i.e. the key/value in formState)
+                          ) => (
+                            // and some methods to connect the input element to formState
                             <>
                               <input
                                 type="file"
                                 multiple
+                                ref={fileInputRef} //Connection to instance of useRef
                                 className="form-control"
                                 onChange={(e) => {
                                   const filesArray = Array.from(e.target.files);
-                                  field.onChange(filesArray); // uppdaterar RHF state korrekt
+                                  field.onChange(filesArray); // This mehtod from field sets the Key/Value for this field in formState
                                   console.log("filesArray:", filesArray);
                                 }}
                               />
@@ -202,8 +222,34 @@ const Task = () => {
                           <i className="bi bi-x-lg"></i>
                         </button>
                       </div>
-                      <div className="file-list" id="attachmentPreview"></div>
+                      <div className="file-list" id="attachmentPreview">
+                        {attachments.length > 0 && (
+                          <ul>
+                            {attachments.map((file, index) => (
+                              <li
+                                key={index}
+                                className="list-group-item d-flex justify-content-between align-items-center"
+                              >
+                                 {/* Display either if it's a real file from the input or metadata from backend  */}
+                                {"name" in file
+                                  ? `${file.name} (${(
+                                      file.size /
+                                      1024 /
+                                      1024
+                                    ).toFixed(2)} MB)`
+                                  : `${file.fileName} (${(
+                                      atob(file.data).length /
+                                      1024 /
+                                      1024
+                                    ).toFixed(2)} MB)`}
+                                
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
                     </div>
+
                     <div className="d-grid gap-2 d-md-flex justify-content-md-end">
                       <button
                         type="submit"
@@ -279,6 +325,13 @@ const Task = () => {
                                   }`}
                                 >
                                   {task.completed ? "Completed" : "Pending"}
+                                </span>
+                                <span className="badge bg-secondary">
+                                  <i className="bi bi-paperclip me-1"></i>{" "}
+                                  {task.attachments
+                                    ? task.attachments.length
+                                    : 0}{" "}
+                                  attachment(s)
                                 </span>
                               </div>
                             </div>
