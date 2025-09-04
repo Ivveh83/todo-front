@@ -5,6 +5,7 @@ import Sidebar from "./Sidebar";
 import Header from "./Header.jsx";
 import { taskService } from "../services/taskService.js";
 import { authService } from "../services/authService.js";
+import { data } from "react-router-dom";
 
 const Task = () => {
   // todo*: make this component functional by implementing state management and API calls
@@ -15,6 +16,7 @@ const Task = () => {
   // todo4: reset attachment input after adding/updating task - DONE
   // todo5: Rewrite logics to only make api call to fetchAllTodos when creating new todo, when updating todo, send api call to backend to update it in db, but
   // don't call api to fetchAllTodos again, instead update state, tasks, with that updated todo
+  // todo6: implement update
 
   const currentUser = authService.getCurrentUser();
   const isAdmin = authService.isAdmin(currentUser);
@@ -161,13 +163,24 @@ const Task = () => {
                           {...register("dueDate", {
                             validate: (value) => {
                               if (!value) return true;
-                              const today = new Date();
-                              today.setHours(0, 0, 0, 0); // nollställ tid
-                              const selected = new Date(value);
-
-                              return (
-                                selected >= today || " cannot be in the past"
-                              );
+                              if (taskToEdit) {
+                                const createdAt = new Date(
+                                  taskToEdit.createdAt
+                                );
+                                createdAt.setHours(0, 0, 0, 0);
+                                const selected = new Date(value);
+                                return (
+                                  selected >= createdAt ||
+                                  " cannot be before creation date"
+                                );
+                              } else {
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0); // nollställ tid
+                                const selected = new Date(value);
+                                return (
+                                  selected >= today || " cannot be in the past"
+                                );
+                              }
                             },
                           })}
                         />
@@ -191,16 +204,21 @@ const Task = () => {
                     </div>
                     <div className="mb-3">
                       <label className="form-label">Attachments</label>
+                      <small className="text-danger">
+                        {errors.attachments && errors.attachments.message}&nbsp;
+                      </small>
                       <div className="input-group mb-3">
-                        <Controller
-                          name="attachments" // This will be the name for the Key in formState
-                          control={control} // Connects Controller with useForm, kind of the same function register has
+                        <Controller // Controller is a React Component that takes propts, i.e. name, control, default value, rules, render.
+                          // It provides more controll than register on what will be saved to formState.
+                          name="attachments" // This will be the name for the Key in formState.
+                          control={control} // Connects Controller with useForm, kind of the same function register has.
                           defaultValue={[]}
                           rules={{
+                            //Is the equivalent to validate in register.
                             validate: {
                               maxFiles: (files) =>
                                 files.length <= 5 ||
-                                "You can upload max 5 files",
+                                " can't have more than 5 files",
                               maxSize: (files) => {
                                 const maxMB = 2;
                                 const tooLarge = files.some(
@@ -208,30 +226,30 @@ const Task = () => {
                                 );
                                 return (
                                   !tooLarge ||
-                                  `Each file must be max ${maxMB} MB`
+                                  ` each file must be max ${maxMB} MB`
                                 );
                               },
                             },
                           }}
                           render={(
-                            { field, fieldState } // Render creates a js-object, field, that has some fields (name and value, i.e. the key/value in formState)
+                            { field, fieldState } // Render creates a js-object, field, that has some fields (name and value, i.e. will later be key/value in formState) -
                           ) => (
-                            // and some methods to connect the input element to formState
+                            // and some methods (onChange) to connect the input element to formState. It also decides the UI of the component.
                             <>
                               <input
                                 type="file"
                                 multiple
-                                ref={fileInputRef} //Connection to instance of useRef
+                                ref={fileInputRef} //Connection to instance of useRef.
                                 className="form-control"
                                 onChange={(e) => {
                                   const filesArray = Array.from(e.target.files);
-                                  field.onChange(filesArray); // This mehtod from field sets the Key/Value for this field in formState
+                                  field.onChange(filesArray); // This mehtod sets the Key/Value for this field in formState
                                   console.log("filesArray:", filesArray);
                                 }}
                               />
-                              {fieldState.error && (
+                              {/*{fieldState.error && (
         <small className="text-danger">{fieldState.error.message}</small>
-      )}
+      )}*/}
                             </>
                           )}
                         />
@@ -358,6 +376,11 @@ const Task = () => {
                               <button
                                 className="btn btn-outline-success btn-sm"
                                 title="Complete"
+                                onClick={async () => {
+                                  task.completed = !task.completed;
+                                  await taskService.updateTodo(task);
+                                  setUpdateTaskList(!updateTaskList);
+                                }}
                               >
                                 <i className="bi bi-check-lg"></i>
                               </button>
