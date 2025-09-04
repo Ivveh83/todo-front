@@ -136,7 +136,7 @@ export const taskService = {
       console.log("Error deleting Todo", error);
     }
   },
-  getTodosOverdue: async () => {
+  fetchTodosOverdue: async () => {
     try {
       const token = localStorage.getItem(TOKEN_KEY);
       const response = await axios.get(`${API_URL}/todo/overdue`, {

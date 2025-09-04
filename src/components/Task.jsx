@@ -5,7 +5,6 @@ import Sidebar from "./Sidebar";
 import Header from "./Header.jsx";
 import { taskService } from "../services/taskService.js";
 import { authService } from "../services/authService.js";
-import { data } from "react-router-dom";
 
 const Task = () => {
   // todo*: make this component functional by implementing state management and API calls
@@ -16,7 +15,9 @@ const Task = () => {
   // todo4: reset attachment input after adding/updating task - DONE
   // todo5: Rewrite logics to only make api call to fetchAllTodos when creating new todo, when updating todo, send api call to backend to update it in db, but
   // don't call api to fetchAllTodos again, instead update state, tasks, with that updated todo
-  // todo6: implement update
+  // todo6: Implement complete button - Done
+  // todo7: Create button to demonstrate Person, apply lazy loading
+  // todo8: Apply getTodosOverdue on button Show Overdue Tasks - DONE
 
   const currentUser = authService.getCurrentUser();
   const isAdmin = authService.isAdmin(currentUser);
@@ -71,6 +72,7 @@ const Task = () => {
   const [tasks, setTasks] = useState([]);
   const [updateTaskList, setUpdateTaskList] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState(null);
+  const [getTodosOverdue, setGetTodosOverdue] = useState(false);
 
   useEffect(() => {
     if (taskToEdit) {
@@ -84,7 +86,12 @@ const Task = () => {
   useEffect(() => {
     const fetchAllTodosWithRespectiveUser = async () => {
       try {
-        const data = await taskService.getAllTodos();
+        let data;
+        if (getTodosOverdue) {
+          data = await taskService.fetchTodosOverdue();
+          console.log("Overdue Tasks: ", data)
+          setGetTodosOverdue(false);
+        }else {data = await taskService.getAllTodos();}
 
         const tasksWithAssignee = await Promise.all(
           data.map(async (task) => ({
@@ -309,12 +316,24 @@ const Task = () => {
                     <button
                       className="btn btn-outline-secondary btn-sm"
                       title="Filter"
+                      data-bs-toggle="dropdown"
+                      aria-expanded="false"
                     >
                       <i className="bi bi-funnel"></i>
                     </button>
+                    <ul className="dropdown-menu">
+                      <li>
+                        <button className="dropdown-item" onClick={() => {setGetTodosOverdue(true); setUpdateTaskList(!updateTaskList)}}>
+                          <i className="bi bi-check-square-fill me-2"></i>
+                          Show Overdue Tasks
+                        </button>
+                      </li>
+                    </ul>
                     <button
                       className="btn btn-outline-secondary btn-sm"
                       title="Sort"
+                      data-bs-toggle="dropdown"
+                      aria-expanded="false"
                     >
                       <i className="bi bi-sort-down"></i>
                     </button>
