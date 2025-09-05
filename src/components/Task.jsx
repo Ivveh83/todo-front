@@ -77,8 +77,12 @@ const Task = () => {
   const [updateTaskList, setUpdateTaskList] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState(null);
   const [getTodosOverdue, setGetTodosOverdue] = useState(false);
-  const [submenuOpen, setSubmenuOpen] = useState(false);
+  const [submenuTodosByPersonOpen, setSubmenuTodosByPersonOpen] =
+    useState(false);
+  const [submenuTodosByStatusOpen, setSubmenuTodosByStatusOpen] =
+    useState(false);
   const [getTodosByPerson, setGetTodosByPerson] = useState(0);
+  const [getTodosByStatus, setGetTodosByStatus] = useState(null);
 
   useEffect(() => {
     if (taskToEdit) {
@@ -98,9 +102,13 @@ const Task = () => {
           console.log("Overdue Tasks: ", data);
           setGetTodosOverdue(false);
         } else if (getTodosByPerson !== 0) {
-          console.log("Tasks by Person: ", data);
           data = await taskService.fetchTodosByPerson(getTodosByPerson);
+          console.log("Tasks by Person: ", data);
           setGetTodosByPerson(0);
+        } else if (getTodosByStatus === true || getTodosByStatus === false) {
+          data = await taskService.fetchTodosByStatus(getTodosByStatus);
+          console.log("Tasks by Status: ", data);
+          setGetTodosByStatus(null);
         } else {
           data = await taskService.getAllTodos();
         }
@@ -344,21 +352,23 @@ const Task = () => {
                             setUpdateTaskList(!updateTaskList);
                           }}
                         >
-                          <i className="bi bi-check-square-fill me-2"></i>
+                          <i className="bi bi-calendar-x me-2"></i>
                           Show Overdue Tasks
                         </button>
                       </li>
                       {/* Hover submenu for filtering Task by Person */}
                       <li
                         className={`dropdown-submenu ${
-                          submenuOpen ? "show" : ""
+                          submenuTodosByPersonOpen ? "show" : ""
                         }`}
                       >
                         <button
                           className="dropdown-item d-flex justify-content-between align-items-center"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSubmenuOpen(!submenuOpen);
+                            setSubmenuTodosByPersonOpen(
+                              !submenuTodosByPersonOpen
+                            );
                           }}
                         >
                           <span>
@@ -368,7 +378,7 @@ const Task = () => {
                           <i className="bi bi-chevron-right"></i>
                         </button>
 
-                        {submenuOpen && (
+                        {submenuTodosByPersonOpen && (
                           <ul
                             className="dropdown-menu p-3 shadow position-absolute top-0 start-100"
                             onClick={(e) => e.stopPropagation()}
@@ -377,7 +387,7 @@ const Task = () => {
                               <button
                                 className="btn-close border position-absolute top-0 end-0 m-1 p-2"
                                 onClick={() => {
-                                  setSubmenuOpen(false);
+                                  setSubmenuTodosByPersonOpen(false);
                                 }}
                               ></button>
                             </div>
@@ -388,7 +398,7 @@ const Task = () => {
                                   const value = e.target.selectPerson.value;
                                   setGetTodosByPerson(value);
                                   setUpdateTaskList(!updateTaskList);
-                                  setSubmenuOpen(false);
+                                  setSubmenuTodosByPersonOpen(false);
                                 }}
                               >
                                 <div className="mb-2">
@@ -397,7 +407,7 @@ const Task = () => {
                                       htmlFor="todoPerson"
                                       className="form-label"
                                     >
-                                      Select Person
+                                      Select Person:
                                     </label>
                                     <select
                                       className="form-select"
@@ -423,6 +433,108 @@ const Task = () => {
                           </ul>
                         )}
                       </li>
+                      {/* Hover submenu for filtering Task by Status */}
+                      <li
+                        className={`dropdown-submenu ${
+                          submenuTodosByStatusOpen ? "show" : ""
+                        }`}
+                      >
+                        <button
+                          className="dropdown-item d-flex justify-content-between align-items-center"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSubmenuTodosByStatusOpen(
+                              !submenuTodosByStatusOpen
+                            );
+                          }}
+                        >
+                          <span>
+                            <i className="bi bi-calendar-range me-2"></i>
+                            Filter Task by Status
+                          </span>
+                          <i className="bi bi-chevron-right"></i>
+                        </button>
+
+                        {submenuTodosByStatusOpen && (
+                          <ul
+                            className="dropdown-menu p-3 shadow position-absolute top-0 start-100"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div>
+                              <button
+                                className="btn-close border position-absolute top-0 end-0 m-1 p-2"
+                                onClick={() => {
+                                  setSubmenuTodosByStatusOpen(false);
+                                }}
+                              ></button>
+                            </div>
+                            <div className="mt-3">
+                              <form
+                                onSubmit={(e) => {
+                                  e.preventDefault();
+                                  const formData = new FormData(e.target); // e.target here is form
+                                  const value = formData.get("completed"); // name on the radio-buttons
+                                  console.log("Status: ", value);
+                                  setGetTodosByStatus(value === "true");
+                                  setUpdateTaskList((prev) => !prev);
+                                  setSubmenuTodosByStatusOpen(false);
+                                }}
+                              >
+                                <div className="mb-2">
+                                  <div className="col-md-6 mb-3">
+                                    <label
+                                      htmlFor="todoStatus"
+                                      className="form-label"
+                                    >
+                                      Completed:
+                                    </label>
+                                    <div id="taskCompleted">
+                                      <div className="form-check">
+                                        <input
+                                          className="form-check-input"
+                                          type="radio"
+                                          name="completed"
+                                          id="completedTrue"
+                                          value="true"
+                                        />
+                                        <label
+                                          className="form-check-label"
+                                          htmlFor="completedTrue"
+                                        >
+                                          Yes
+                                        </label>
+                                      </div>
+
+                                      <div className="form-check">
+                                        <input
+                                          className="form-check-input"
+                                          type="radio"
+                                          name="completed"
+                                          id="completedFalse"
+                                          value="false"
+                                          defaultChecked
+                                        />
+                                        <label
+                                          className="form-check-label"
+                                          htmlFor="completedFalse"
+                                        >
+                                          No
+                                        </label>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <button
+                                    type="submit"
+                                    className="btn btn-sm btn-primary w-100"
+                                  >
+                                    Apply
+                                  </button>
+                                </div>
+                              </form>
+                            </div>
+                          </ul>
+                        )}
+                      </li>
                       <li>
                         <button
                           className="dropdown-item"
@@ -430,7 +542,7 @@ const Task = () => {
                             setUpdateTaskList(!updateTaskList);
                           }}
                         >
-                          <i className="bi bi-check-square-fill me-2"></i>
+                          <i className="bi bi-arrow-counterclockwise me-2"></i>
                           Show All Tasks
                         </button>
                       </li>

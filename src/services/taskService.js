@@ -164,4 +164,18 @@ export const taskService = {
       throw error;
     }
   },
+  fetchTodosByStatus: async (status) => {
+    try {
+      const token = localStorage.getItem(TOKEN_KEY);
+      const response = await axios.get(`${API_URL}/todo/status?completed=${status}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.status === 200) {
+        return response.data;
+      }
+    } catch (error) {
+      console.log("Error fetching Todos by Status", error);
+      throw error;
+    }
+  },
 };
