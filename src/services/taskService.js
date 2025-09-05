@@ -46,49 +46,50 @@ export const taskService = {
     }
   },
   createTodo: async (data) => {
-  try {
-    const token = localStorage.getItem(TOKEN_KEY);
+    try {
+      const token = localStorage.getItem(TOKEN_KEY);
 
-    const { attachments, ...dataWithoutFiles } = data;
+      const { attachments, ...dataWithoutFiles } = data;
 
-    // Cerate FormData
-    const formData = new FormData();
-    
-    // Add JSON-data as a Blob under "todo"
+      // Cerate FormData
+      const formData = new FormData();
+
+      // Add JSON-data as a Blob under "todo"
       formData.append(
         "todo",
-        new Blob([JSON.stringify(dataWithoutFiles)], { type: "application/json" })
+        new Blob([JSON.stringify(dataWithoutFiles)], {
+          type: "application/json",
+        })
       );
 
-    // Add "files"
-    if (attachments?.length > 0) {
-      attachments.forEach((file) => {
-        formData.append("files", file);
+      // Add "files"
+      if (attachments?.length > 0) {
+        attachments.forEach((file) => {
+          formData.append("files", file);
+        });
+      }
+
+      const response = await axios.post(`${API_URL}/todo`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data", // Axios sets this automatic, but it doesn't hurt to be explicit
+        },
       });
-    }
 
-    const response = await axios.post(`${API_URL}/todo`, formData, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "multipart/form-data", // Axios sets this automatic, but it doesn't hurt to be explicit
-      },
-    });
-
-    if (response.status === 201) {
-      return response.data;
+      if (response.status === 201) {
+        return response.data;
+      }
+    } catch (error) {
+      console.log("Error creating Todo", error);
     }
-  } catch (error) {
-    console.log("Error creating Todo", error);
-  }
-},
+  },
   updateTodo: async (data) => {
     try {
       const token = localStorage.getItem(TOKEN_KEY);
 
       const { attachments, ...dataWithoutFiles } = data;
 
-      console.log("attachments length: ", attachments.length)
-
+      console.log("attachments length: ", attachments.length);
 
       // Create FormData
       const formData = new FormData();
@@ -96,13 +97,13 @@ export const taskService = {
       // Add JSON-data as a Blob under "todo"
       formData.append(
         "todo",
-        new Blob([JSON.stringify(dataWithoutFiles)], { type: "application/json" })
+        new Blob([JSON.stringify(dataWithoutFiles)], {
+          type: "application/json",
+        })
       );
 
       // add "files" if exists
-      if (
-        attachments?.length > 0
-      ) {
+      if (attachments?.length > 0) {
         for (const file of attachments) {
           formData.append("files", file);
         }
@@ -149,5 +150,18 @@ export const taskService = {
       console.log("Error fetching Todos which are Overdue", error);
     }
   },
-  
+  fetchTodosByPerson: async (personId) => {
+    try {
+      const token = localStorage.getItem(TOKEN_KEY);
+      const response = await axios.get(`${API_URL}/todo/person/${personId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.status === 200) {
+        return response.data;
+      }
+    } catch (error) {
+      console.log("Error fetching Todos by Person", error);
+      throw error;
+    }
+  },
 };

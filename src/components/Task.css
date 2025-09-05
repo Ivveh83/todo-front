@@ -123,3 +123,11 @@
         width: 100%;
     }
 }
+
+.dropdown-submenu > .dropdown-menu {
+  display: none;
+  margin-left: 0.3rem;
+}
+.dropdown-submenu.show > .dropdown-menu {
+  display: block;
+}

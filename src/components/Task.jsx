@@ -18,6 +18,10 @@ const Task = () => {
   // todo6: Implement complete button - Done
   // todo7: Create button to demonstrate Person, apply lazy loading
   // todo8: Apply getTodosOverdue on button Show Overdue Tasks - DONE
+  // todo9: Implement functionality to retrieve all todos for a specific person
+  //      - fetch functionality
+  //      - Button
+  //        - How to Get Persons? Initially go with hard coded variant, later implement it dynamically
 
   const currentUser = authService.getCurrentUser();
   const isAdmin = authService.isAdmin(currentUser);
@@ -73,6 +77,8 @@ const Task = () => {
   const [updateTaskList, setUpdateTaskList] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState(null);
   const [getTodosOverdue, setGetTodosOverdue] = useState(false);
+  const [submenuOpen, setSubmenuOpen] = useState(false);
+  const [getTodosByPerson, setGetTodosByPerson] = useState(0);
 
   useEffect(() => {
     if (taskToEdit) {
@@ -84,14 +90,20 @@ const Task = () => {
   }, [taskToEdit, reset]);
 
   useEffect(() => {
-    const fetchAllTodosWithRespectiveUser = async () => {
+    const fetchTodosWithRespectiveUser = async () => {
       try {
         let data;
         if (getTodosOverdue) {
           data = await taskService.fetchTodosOverdue();
-          console.log("Overdue Tasks: ", data)
+          console.log("Overdue Tasks: ", data);
           setGetTodosOverdue(false);
-        }else {data = await taskService.getAllTodos();}
+        } else if (getTodosByPerson !== 0) {
+          console.log("Tasks by Person: ", data);
+          data = await taskService.fetchTodosByPerson(getTodosByPerson);
+          setGetTodosByPerson(0);
+        } else {
+          data = await taskService.getAllTodos();
+        }
 
         const tasksWithAssignee = await Promise.all(
           data.map(async (task) => ({
@@ -108,7 +120,7 @@ const Task = () => {
         console.error("Error fetching Todos:", error);
       }
     };
-    fetchAllTodosWithRespectiveUser();
+    fetchTodosWithRespectiveUser();
   }, [updateTaskList]);
 
   return (
@@ -312,6 +324,8 @@ const Task = () => {
               <div className="card shadow-sm tasks-list mt-4">
                 <div className="card-header bg-white d-flex justify-content-between align-items-center">
                   <h5 className="card-title mb-0">Tasks</h5>
+
+                  {/*Filter and Sorting*/}
                   <div className="btn-group">
                     <button
                       className="btn btn-outline-secondary btn-sm"
@@ -323,9 +337,101 @@ const Task = () => {
                     </button>
                     <ul className="dropdown-menu">
                       <li>
-                        <button className="dropdown-item" onClick={() => {setGetTodosOverdue(true); setUpdateTaskList(!updateTaskList)}}>
+                        <button
+                          className="dropdown-item"
+                          onClick={() => {
+                            setGetTodosOverdue(true);
+                            setUpdateTaskList(!updateTaskList);
+                          }}
+                        >
                           <i className="bi bi-check-square-fill me-2"></i>
                           Show Overdue Tasks
+                        </button>
+                      </li>
+                      {/* Hover submenu for filtering Task by Person */}
+                      <li
+                        className={`dropdown-submenu ${
+                          submenuOpen ? "show" : ""
+                        }`}
+                      >
+                        <button
+                          className="dropdown-item d-flex justify-content-between align-items-center"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSubmenuOpen(!submenuOpen);
+                          }}
+                        >
+                          <span>
+                            <i className="bi bi-calendar-range me-2"></i>
+                            Filter Task by Person
+                          </span>
+                          <i className="bi bi-chevron-right"></i>
+                        </button>
+
+                        {submenuOpen && (
+                          <ul
+                            className="dropdown-menu p-3 shadow position-absolute top-0 start-100"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div>
+                              <button
+                                className="btn-close border position-absolute top-0 end-0 m-1 p-2"
+                                onClick={() => {
+                                  setSubmenuOpen(false);
+                                }}
+                              ></button>
+                            </div>
+                            <div className="mt-3">
+                              <form
+                                onSubmit={(e) => {
+                                  e.preventDefault();
+                                  const value = e.target.selectPerson.value;
+                                  setGetTodosByPerson(value);
+                                  setUpdateTaskList(!updateTaskList);
+                                  setSubmenuOpen(false);
+                                }}
+                              >
+                                <div className="mb-2">
+                                  <div className="col-md-6 mb-3">
+                                    <label
+                                      htmlFor="todoPerson"
+                                      className="form-label"
+                                    >
+                                      Select Person
+                                    </label>
+                                    <select
+                                      className="form-select"
+                                      id="selectPerson"
+                                      name="selectPerson"
+                                    >
+                                      <option value="">
+                                        -- Select Person (Optional) --
+                                      </option>
+                                      <option value="2">Mehrdad Javan</option>
+                                      <option value="3">Simon Elbrink</option>
+                                    </select>
+                                  </div>
+                                  <button
+                                    type="submit"
+                                    className="btn btn-sm btn-primary w-100"
+                                  >
+                                    Apply
+                                  </button>
+                                </div>
+                              </form>
+                            </div>
+                          </ul>
+                        )}
+                      </li>
+                      <li>
+                        <button
+                          className="dropdown-item"
+                          onClick={() => {
+                            setUpdateTaskList(!updateTaskList);
+                          }}
+                        >
+                          <i className="bi bi-check-square-fill me-2"></i>
+                          Show All Tasks
                         </button>
                       </li>
                     </ul>
