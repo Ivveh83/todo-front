@@ -634,15 +634,13 @@ const Task = () => {
                           }
                         >
                           <i className="bi bi-check-square me-2"></i>
-                          Sort by Status Not Completed
+                          Sort by Status Not Done
                         </button>
                       </li>
                       <li>
                         <button
                           className="dropdown-item"
-                          onClick={() =>
-                            setUpdateTaskList((prev) => !prev)
-                          }
+                          onClick={() => setUpdateTaskList((prev) => !prev)}
                         >
                           <i className="bi bi-arrow-counterclockwise me-2"></i>
                           Reset and Show All
@@ -689,10 +687,16 @@ const Task = () => {
                                   className={`badge me-2 ${
                                     task.completed
                                       ? "bg-success"
-                                      : "bg-warning text-dark"
+                                      : task.personId
+                                      ? "bg-info text-dark" // In-progress
+                                      : "bg-warning text-dark" // Pending
                                   }`}
                                 >
-                                  {task.completed ? "Completed" : "Pending"}
+                                  {task.completed
+                                    ? "Completed"
+                                    : task.personId
+                                    ? "In-progress"
+                                    : "Pending..."}
                                 </span>
                                 <span className="badge bg-secondary">
                                   <i className="bi bi-paperclip me-1"></i>{" "}
