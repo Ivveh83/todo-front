@@ -178,4 +178,24 @@ export const taskService = {
       throw error;
     }
   },
+  sortTasks: (tasks, sortBy) => {
+  switch (sortBy) {
+    case 'titleA-Z':
+      return [...tasks].sort((a, b) => a.title.localeCompare(b.title));
+    case 'titleZ-A':
+      return [...tasks].sort((a, b) => b.title.localeCompare(a.title));
+    case 'dueDateAscending':
+      return [...tasks].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+    case 'dueDateDescending':
+      return [...tasks].sort((a, b) => new Date(b.dueDate) - new Date(a.dueDate));
+    case 'taskDone':
+      return [...tasks].sort((a, b) => b.completed - a.completed);
+    case 'taskNotDone':
+      return [...tasks].sort((a, b) => a.completed - b.completed);
+    case 'createdAt':
+      return [...tasks].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    default:
+      return tasks;
+  }
+},
 };

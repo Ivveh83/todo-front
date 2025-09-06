@@ -15,10 +15,10 @@ const Task = () => {
   // todo4: reset attachment input after adding/updating task - DONE
   // todo5: Rewrite logics to only make api call to fetchAllTodos when creating new todo, when updating todo, send api call to backend to update it in db, but
   // don't call api to fetchAllTodos again, instead update state, tasks, with that updated todo
-  // todo6: Implement complete button - Done
+  // todo6: Implement complete button - DONE
   // todo7: Create button to demonstrate Person, apply lazy loading
   // todo8: Apply getTodosOverdue on button Show Overdue Tasks - DONE
-  // todo9: Implement functionality to retrieve all todos for a specific person
+  // todo9: Implement functionality to retrieve all todos for a specific person - DONE
   //      - fetch functionality
   //      - Button
   //        - How to Get Persons? Initially go with hard coded variant, later implement it dynamically
@@ -70,7 +70,7 @@ const Task = () => {
       //
       fileInputRef.current.value = ""; // manually empties file input
     }
-    setUpdateTaskList(!updateTaskList);
+    setUpdateTaskList((prev) => !prev);
   };
 
   const [tasks, setTasks] = useState([]);
@@ -349,7 +349,7 @@ const Task = () => {
                           className="dropdown-item"
                           onClick={() => {
                             setGetTodosOverdue(true);
-                            setUpdateTaskList(!updateTaskList);
+                            setUpdateTaskList((prev) => !prev);
                           }}
                         >
                           <i className="bi bi-calendar-x me-2"></i>
@@ -366,9 +366,7 @@ const Task = () => {
                           className="dropdown-item d-flex justify-content-between align-items-center"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSubmenuTodosByPersonOpen(
-                              !submenuTodosByPersonOpen
-                            );
+                            setSubmenuTodosByPersonOpen((prev) => !prev);
                           }}
                         >
                           <span>
@@ -397,7 +395,7 @@ const Task = () => {
                                   e.preventDefault();
                                   const value = e.target.selectPerson.value;
                                   setGetTodosByPerson(value);
-                                  setUpdateTaskList(!updateTaskList);
+                                  setUpdateTaskList((prev) => !prev);
                                   setSubmenuTodosByPersonOpen(false);
                                 }}
                               >
@@ -443,9 +441,7 @@ const Task = () => {
                           className="dropdown-item d-flex justify-content-between align-items-center"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSubmenuTodosByStatusOpen(
-                              !submenuTodosByStatusOpen
-                            );
+                            setSubmenuTodosByStatusOpen((prev) => !prev);
                           }}
                         >
                           <span>
@@ -539,7 +535,7 @@ const Task = () => {
                         <button
                           className="dropdown-item"
                           onClick={() => {
-                            setUpdateTaskList(!updateTaskList);
+                            setUpdateTaskList((prev) => !prev);
                           }}
                         >
                           <i className="bi bi-arrow-counterclockwise me-2"></i>
@@ -547,7 +543,9 @@ const Task = () => {
                         </button>
                       </li>
                     </ul>
+                    {/* Sorting buttons*/}
                     <button
+                      type="button"
                       className="btn btn-outline-secondary btn-sm"
                       title="Sort"
                       data-bs-toggle="dropdown"
@@ -555,6 +553,102 @@ const Task = () => {
                     >
                       <i className="bi bi-sort-down"></i>
                     </button>
+                    <ul className="dropdown-menu">
+                      <li>
+                        <button
+                          className="dropdown-item"
+                          onClick={() =>
+                            setTasks(taskService.sortTasks(tasks, "titleA-Z"))
+                          }
+                        >
+                          <i className="bi bi-sort-alpha-down me-2"></i>
+                          Sort by Title (A-Z)
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          className="dropdown-item"
+                          onClick={() =>
+                            setTasks(taskService.sortTasks(tasks, "titleZ-A"))
+                          }
+                        >
+                          <i className="bi bi-sort-alpha-up me-2"></i>
+                          Sort by Title (Z-A)
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          className="dropdown-item"
+                          onClick={() =>
+                            setTasks(
+                              taskService.sortTasks(tasks, "dueDateAscending")
+                            )
+                          }
+                        >
+                          <i className="bi bi-calendar2-day me-2"></i>
+                          Sort by Due Date (Lo-Hi)
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          className="dropdown-item"
+                          onClick={() =>
+                            setTasks(
+                              taskService.sortTasks(tasks, "dueDateDescending")
+                            )
+                          }
+                        >
+                          <i className="bi bi-calendar2-day me-2"></i>
+                          Sort by Due Date (Hi-Lo)
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          className="dropdown-item"
+                          onClick={() =>
+                            setTasks(taskService.sortTasks(tasks, "createdAt"))
+                          }
+                        >
+                          <i className="bi bi-clock me-2"></i>
+                          Sort by Created At
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          className="dropdown-item"
+                          onClick={() =>
+                            setTasks(taskService.sortTasks(tasks, "taskDone"))
+                          }
+                        >
+                          <i className="bi bi-check-square-fill me-2"></i>
+                          Sort by Status Completed
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          className="dropdown-item"
+                          onClick={() =>
+                            setTasks(
+                              taskService.sortTasks(tasks, "taskNotDone")
+                            )
+                          }
+                        >
+                          <i className="bi bi-check-square me-2"></i>
+                          Sort by Status Not Completed
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          className="dropdown-item"
+                          onClick={() =>
+                            setUpdateTaskList((prev) => !prev)
+                          }
+                        >
+                          <i className="bi bi-arrow-counterclockwise me-2"></i>
+                          Reset and Show All
+                        </button>
+                      </li>
+                    </ul>
                   </div>
                 </div>
                 <div className="card-body">
@@ -616,7 +710,7 @@ const Task = () => {
                                 onClick={async () => {
                                   task.completed = !task.completed;
                                   await taskService.updateTodo(task);
-                                  setUpdateTaskList(!updateTaskList);
+                                  setUpdateTaskList((prev) => !prev);
                                 }}
                               >
                                 <i className="bi bi-check-lg"></i>
@@ -638,7 +732,7 @@ const Task = () => {
                                 disabled={!isAdmin}
                                 onClick={async () => {
                                   await taskService.deleteTodo(task.id);
-                                  setUpdateTaskList(!updateTaskList);
+                                  setUpdateTaskList((prev) => !prev);
                                 }}
                               >
                                 <i className="bi bi-trash"></i>
