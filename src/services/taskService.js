@@ -85,11 +85,13 @@ export const taskService = {
   },
   updateTodo: async (data) => {
     try {
+
+      console.log("Running updateTodo")
       const token = localStorage.getItem(TOKEN_KEY);
 
       const { attachments, ...dataWithoutFiles } = data;
 
-      console.log("attachments length: ", attachments.length);
+      console.log("attachments length: ", attachments?.length);
 
       // Create FormData
       const formData = new FormData();
@@ -101,13 +103,18 @@ export const taskService = {
           type: "application/json",
         })
       );
-
+      formData.append("files", []);
       // add "files" if exists
       if (attachments?.length > 0) {
         for (const file of attachments) {
           formData.append("files", file);
+          console.log("adding file")
         }
       }
+      formData.forEach((value, key) => {
+  console.log(key, value);
+});
+
 
       // Send PUT-request
       const response = await axios.put(`${API_URL}/todo/${data.id}`, formData, {

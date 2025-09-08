@@ -14,7 +14,9 @@ const Task = () => {
   // todo3: make dueDate optional - DONE
   // todo4: reset attachment input after adding/updating task - DONE
   // todo5: Rewrite logics to only make api call to fetchAllTodos when creating new todo, when updating todo, send api call to backend to update it in db, but
-  // don't call api to fetchAllTodos again, instead update state, tasks, with that updated todo
+  // don't call api to fetchAllTodos again, instead update state, tasks, with that updated todo - REJECTED: Not logic, because other users might have have
+  // added tasks inbetween time, and we wan't the latest data in db. Could implement a lazy loading UI button to fetch latest data only when pressing that button,
+  // but I think that would just be anoying to remember to press and affect UX negativly :-)
   // todo6: Implement complete button - DONE
   // todo7: Create button to demonstrate Person, apply lazy loading
   // todo8: Apply getTodosOverdue on button Show Overdue Tasks - DONE
@@ -22,6 +24,15 @@ const Task = () => {
   //      - fetch functionality
   //      - Button
   //        - How to Get Persons? Initially go with hard coded variant, later implement it dynamically
+  // todo10: Implement status "In-Progress" - DONE
+  // todo11: Deleting existing attachement is not possible at the moment, since if I send an empty array in the put request, backend will not delete it.
+  // Backend is designed at the moment to only accept FormData, not JSON. When updating task, if no change is made to attachment file, it will not be sent to
+  // backend.
+  // In the backend, attachments will therefore be null in the TodoController. Later in the TodoServiceImpl, if the todo attachments is null or empty it will,
+  // of course, not be updated, and the existing attachments attached to the todo will be saved along with the todo. This happens as well when sending an empty
+  // array to the backend, so delete the array in frontend and send it to backend will have no effect.
+  //    - How to fix it?
+  // todo12: Implement a button to call getTodoByPerson and show todo person in the task list, i.e. apply lazy loading for showing person.
 
   const currentUser = authService.getCurrentUser();
   const isAdmin = authService.isAdmin(currentUser);
@@ -48,7 +59,7 @@ const Task = () => {
     defaultValues: defaultFormValues,
   });
 
-  const attachments = watch("attachments");
+  const attachmentsWatch = watch("attachments");
 
   const onSubmit = async (data) => {
     console.log("Before: ", { ...data });
@@ -74,6 +85,7 @@ const Task = () => {
   };
 
   const [tasks, setTasks] = useState([]);
+  const [persons, setPersons] = useState([]);
   const [updateTaskList, setUpdateTaskList] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState(null);
   const [getTodosOverdue, setGetTodosOverdue] = useState(false);
@@ -113,17 +125,25 @@ const Task = () => {
           data = await taskService.getAllTodos();
         }
 
-        const tasksWithAssignee = await Promise.all(
+        {
+          /*const tasksWithAssignee = await Promise.all(
           data.map(async (task) => ({
             ...task,
             assignee: task.personId
               ? await taskService.getPersonById(task.personId)
               : {},
           }))
-        );
+        );*/
+        }
+        const tasksWithAssignee = data.map((task) => ({
+          ...task,
+          assignee: persons.some((person) => person.id === task.personId)
+            ? persons.find((person) => person.id === task.personId)
+            : {},
+        }));
 
         setTasks(tasksWithAssignee);
-        console.log("Tasks: ", tasksWithAssignee);
+        console.log("TasksWithAssignee: ", tasksWithAssignee);
       } catch (error) {
         console.error("Error fetching Todos:", error);
       }
@@ -242,20 +262,18 @@ const Task = () => {
                           defaultValue={[]}
                           rules={{
                             //Is the equivalent to validate in register.
-                            validate: {
-                              maxFiles: (files) =>
-                                files.length <= 5 ||
-                                " can't have more than 5 files",
-                              maxSize: (files) => {
-                                const maxMB = 2;
-                                const tooLarge = files.some(
-                                  (file) => file.size / 1024 / 1024 > maxMB
-                                );
-                                return (
-                                  !tooLarge ||
-                                  ` each file must be max ${maxMB} MB`
-                                );
-                              },
+                            validate: (files) => {
+                              if (!files) return true; // no files → skips validation
+                              // otherwise validation runs
+                              if (files.length > 5)
+                                return " can't have more than 5 files";
+                              const maxMB = 2;
+                              const tooLarge = files.some(
+                                (file) => file.size / 1024 / 1024 > maxMB
+                              );
+                              if (tooLarge)
+                                return ` each file must be max ${maxMB} MB`;
+                              return true; // all are ok
                             },
                           }}
                           render={(
@@ -277,20 +295,26 @@ const Task = () => {
                               {/*{fieldState.error && (
         <small className="text-danger">{fieldState.error.message}</small>
       )}*/}
+                              <button
+                                className="btn btn-outline-secondary"
+                                type="button"
+                                onClick={() => {
+                                  console.log(
+                                    "Attachment reset button clicked"
+                                  );
+                                  field.onChange(null);
+                                }}
+                              >
+                                <i className="bi bi-x-lg"></i>
+                              </button>
                             </>
                           )}
                         />
-                        <button
-                          className="btn btn-outline-secondary"
-                          type="button"
-                        >
-                          <i className="bi bi-x-lg"></i>
-                        </button>
                       </div>
                       <div className="file-list" id="attachmentPreview">
-                        {attachments.length > 0 && (
+                        {attachmentsWatch?.length > 0 && (
                           <ul>
-                            {attachments.map((file, index) => (
+                            {attachmentsWatch.map((file, index) => (
                               <li
                                 key={index}
                                 className="list-group-item d-flex justify-content-between align-items-center"
@@ -333,7 +357,7 @@ const Task = () => {
                 <div className="card-header bg-white d-flex justify-content-between align-items-center">
                   <h5 className="card-title mb-0">Tasks</h5>
 
-                  {/*Filter and Sorting*/}
+                  {/*Filter Buttons*/}
                   <div className="btn-group">
                     <button
                       className="btn btn-outline-secondary btn-sm"
@@ -344,6 +368,7 @@ const Task = () => {
                       <i className="bi bi-funnel"></i>
                     </button>
                     <ul className="dropdown-menu">
+                      <span className="mx-2">Filter by:</span>
                       <li>
                         <button
                           className="dropdown-item"
@@ -371,7 +396,7 @@ const Task = () => {
                         >
                           <span>
                             <i className="bi bi-calendar-range me-2"></i>
-                            Filter Task by Person
+                            Show per Person
                           </span>
                           <i className="bi bi-chevron-right"></i>
                         </button>
@@ -446,7 +471,7 @@ const Task = () => {
                         >
                           <span>
                             <i className="bi bi-calendar-range me-2"></i>
-                            Filter Task by Status
+                            Show by Completed
                           </span>
                           <i className="bi bi-chevron-right"></i>
                         </button>
@@ -554,6 +579,7 @@ const Task = () => {
                       <i className="bi bi-sort-down"></i>
                     </button>
                     <ul className="dropdown-menu">
+                      <span className="mx-2">Sort by:</span>
                       <li>
                         <button
                           className="dropdown-item"
@@ -562,7 +588,7 @@ const Task = () => {
                           }
                         >
                           <i className="bi bi-sort-alpha-down me-2"></i>
-                          Sort by Title (A-Z)
+                          Title (A-Z)
                         </button>
                       </li>
                       <li>
@@ -573,7 +599,7 @@ const Task = () => {
                           }
                         >
                           <i className="bi bi-sort-alpha-up me-2"></i>
-                          Sort by Title (Z-A)
+                          Title (Z-A)
                         </button>
                       </li>
                       <li>
@@ -586,7 +612,7 @@ const Task = () => {
                           }
                         >
                           <i className="bi bi-calendar2-day me-2"></i>
-                          Sort by Due Date (Lo-Hi)
+                          Due Date (Lo-Hi)
                         </button>
                       </li>
                       <li>
@@ -599,7 +625,7 @@ const Task = () => {
                           }
                         >
                           <i className="bi bi-calendar2-day me-2"></i>
-                          Sort by Due Date (Hi-Lo)
+                          Due Date (Hi-Lo)
                         </button>
                       </li>
                       <li>
@@ -610,7 +636,7 @@ const Task = () => {
                           }
                         >
                           <i className="bi bi-clock me-2"></i>
-                          Sort by Created At
+                          Created At
                         </button>
                       </li>
                       <li>
@@ -621,7 +647,7 @@ const Task = () => {
                           }
                         >
                           <i className="bi bi-check-square-fill me-2"></i>
-                          Sort by Status Completed
+                          Status Completed
                         </button>
                       </li>
                       <li>
@@ -634,7 +660,7 @@ const Task = () => {
                           }
                         >
                           <i className="bi bi-check-square me-2"></i>
-                          Sort by Status Not Done
+                          Status Not Completed
                         </button>
                       </li>
                       <li>
@@ -679,10 +705,64 @@ const Task = () => {
                                     ? task.dueDate.slice(0, 10)
                                     : "Undefined"}
                                 </small>
-                                <span className="badge bg-info me-2">
-                                  <i className="bi bi-person"></i>{" "}
-                                  {task.assignee?.name || "Unassigned"}
-                                </span>
+
+                                {task.assignee?.name ? ( // If task.assignee has a key named "name"
+                                  <span className="badge bg-info me-2">
+                                    <i className="bi bi-person"></i>{" "}
+                                    {task.assignee.name}
+                                  </span>
+                                ) : task.personId ? ( // If task has NO key named "name" and is NOT unassigned
+                                  <button
+                                    className="btn btn-sm border-black btn-info mx-1"
+                                    style={{
+                                      height: "1.8em", // matchar badge höjd
+                                      lineHeight: "1.5em", // centrera text vertikalt
+                                      padding: "0 0.5em", // matcha badge padding
+                                      whiteSpace: "nowrap", // hindrar textbrytning inuti knappen
+                                      marginRight: "0.5em", // spacing istället för mx-1
+                                      fontSize: "0.75rem", // samma fontstorlek som badges
+                                    }}
+                                    onClick={async () => {
+                                      // Fetch person
+                                      const person =
+                                        await taskService.getPersonById(
+                                          task.personId
+                                        );
+                                      if (!person) return; // If something goes wrong by fetching with api
+
+                                      // Add to state if it doesn't already exist in state persons
+                                      setPersons((prev) => {
+                                        if (
+                                          !prev.some((p) => p.id === person.id) // i.e.if the opposit of true
+                                        ) {
+                                          return [...prev, person];
+                                        }
+                                        return prev; // Otherwise set persons as it was
+                                      });
+
+                                      // Update task.assignee locally
+                                      {
+                                        /*setTasks((prev) =>
+                                        prev.map((t) =>
+                                          t.id === task.id
+                                            ? { ...t, assignee: person }
+                                            : t
+                                        )
+                                      );*/
+                                      }
+                                      // Update task.assignee globally
+                                      setUpdateTaskList((prev) => !prev); // Activate the switch to re-render the component
+                                    }}
+                                  >
+                                    Show Person
+                                  </button>
+                                ) : (
+                                  //If task has NO key named "name" and task.personId is null
+                                  <span className="badge bg-warning me-2">
+                                    Unassigned
+                                  </span>
+                                )}
+
                                 <span
                                   className={`badge me-2 ${
                                     task.completed
@@ -698,14 +778,17 @@ const Task = () => {
                                     ? "In-progress"
                                     : "Pending..."}
                                 </span>
-                                <span className="badge bg-secondary">
-                                  <i className="bi bi-paperclip me-1"></i>{" "}
-                                  {task.attachments
-                                    ? task.attachments.length
-                                    : 0}{" "}
-                                  attachment(s)
-                                </span>
-                              </div>
+                                </div>
+                                <div>
+                                  <span className="badge bg-secondary">
+                                    <i className="bi bi-paperclip me-1"></i>{" "}
+                                    {task.attachments
+                                      ? task.attachments.length
+                                      : 0}{" "}
+                                    attachment(s)
+                                  </span>
+                                </div>
+                              
                             </div>
                             <div className="btn-group ms-3">
                               <button
