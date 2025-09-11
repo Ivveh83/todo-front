@@ -83,10 +83,10 @@ export const taskService = {
       console.log("Error creating Todo", error);
     }
   },
+
   updateTodo: async (data) => {
     try {
-
-      console.log("Running updateTodo")
+      console.log("Running updateTodo");
       const token = localStorage.getItem(TOKEN_KEY);
 
       const { attachments, ...dataWithoutFiles } = data;
@@ -103,18 +103,24 @@ export const taskService = {
           type: "application/json",
         })
       );
-      formData.append("files", []);
+      // formData.append("files", []);
       // add "files" if exists
       if (attachments?.length > 0) {
         for (const file of attachments) {
           formData.append("files", file);
-          console.log("adding file")
+          console.log("adding file");
         }
       }
-      formData.forEach((value, key) => {
-  console.log(key, value);
-});
+      formData.append(
+        "attachmentsToDelete",
+        new Blob([JSON.stringify(data.attachmentsToDelete || [])], {
+          type: "application/json",
+        })
+      );
 
+      formData.forEach((value, key) => {
+        console.log(key, value);
+      });
 
       // Send PUT-request
       const response = await axios.put(`${API_URL}/todo/${data.id}`, formData, {
@@ -174,9 +180,12 @@ export const taskService = {
   fetchTodosByStatus: async (status) => {
     try {
       const token = localStorage.getItem(TOKEN_KEY);
-      const response = await axios.get(`${API_URL}/todo/status?completed=${status}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        `${API_URL}/todo/status?completed=${status}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       if (response.status === 200) {
         return response.data;
       }
@@ -186,23 +195,29 @@ export const taskService = {
     }
   },
   sortTasks: (tasks, sortBy) => {
-  switch (sortBy) {
-    case 'titleA-Z':
-      return [...tasks].sort((a, b) => a.title.localeCompare(b.title));
-    case 'titleZ-A':
-      return [...tasks].sort((a, b) => b.title.localeCompare(a.title));
-    case 'dueDateAscending':
-      return [...tasks].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
-    case 'dueDateDescending':
-      return [...tasks].sort((a, b) => new Date(b.dueDate) - new Date(a.dueDate));
-    case 'taskDone':
-      return [...tasks].sort((a, b) => b.completed - a.completed);
-    case 'taskNotDone':
-      return [...tasks].sort((a, b) => a.completed - b.completed);
-    case 'createdAt':
-      return [...tasks].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-    default:
-      return tasks;
-  }
-},
+    switch (sortBy) {
+      case "titleA-Z":
+        return [...tasks].sort((a, b) => a.title.localeCompare(b.title));
+      case "titleZ-A":
+        return [...tasks].sort((a, b) => b.title.localeCompare(a.title));
+      case "dueDateAscending":
+        return [...tasks].sort(
+          (a, b) => new Date(a.dueDate) - new Date(b.dueDate)
+        );
+      case "dueDateDescending":
+        return [...tasks].sort(
+          (a, b) => new Date(b.dueDate) - new Date(a.dueDate)
+        );
+      case "taskDone":
+        return [...tasks].sort((a, b) => b.completed - a.completed);
+      case "taskNotDone":
+        return [...tasks].sort((a, b) => a.completed - b.completed);
+      case "createdAt":
+        return [...tasks].sort(
+          (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+        );
+      default:
+        return tasks;
+    }
+  },
 };

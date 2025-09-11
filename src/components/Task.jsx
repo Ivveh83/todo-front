@@ -32,7 +32,22 @@ const Task = () => {
   // of course, not be updated, and the existing attachments attached to the todo will be saved along with the todo. This happens as well when sending an empty
   // array to the backend, so delete the array in frontend and send it to backend will have no effect.
   //    - How to fix it?
-  // todo12: Implement a button to call getTodoByPerson and show todo person in the task list, i.e. apply lazy loading for showing person.
+  //    - In the backend:
+  //    - In the TodoController, make an endpoint that takes todo-id and attachment-id as path variables to delete a specific attachment for a specific todo-id.
+  //    - In the TodoController, call a method in TodoServiceImpl that fetches the todo, calls getAttachements and deletes the attachment with that id if it exists.
+  //    - In the TodoServiceImpl, call a method in TodoRepository that updates the todo with the new list of attachments (without the deleted one),
+  //      this works because of orphanRemoval = true.
+  //    - In the frontend, in taskService, add a method to call that endpoint.
+  //    - Add a delete button for each attachment in the list when updating a task, that calls the method in the taskService.
+  //    - call setUpdateTaskList to true to refresh the list.
+  //    - Test with Postman first, then implement in frontend.
+  //    - Alternative: In the frontend, add a delete button for each attachment when updating a task, to mark it for deletion. When submitting the form, send the
+  //      ids of the attachments to be deleted to the backend in a separate field in the form data. In the backend, handle the deletion of these attachments
+  //      before updating the todo with the new attachments.
+
+  // todo12: Implement a button to call getTodoByPerson and show todo person in the task list, i.e. apply lazy loading for showing person. - DONE
+  // todo13: Cut up the Task component into smaller components - REJECTED: Not at this moment, since I am the only developer and I want to keep
+  // the code in one file for easy access and overview. Later when more developers are involved, it might be a good idea to cut it up.
 
   const currentUser = authService.getCurrentUser();
   const isAdmin = authService.isAdmin(currentUser);
@@ -59,7 +74,7 @@ const Task = () => {
     defaultValues: defaultFormValues,
   });
 
-  const attachmentsWatch = watch("attachments");
+  const attachmentsWatch = watch("attachments"); // Watch the attachments field in formState to display the list of files.
 
   const onSubmit = async (data) => {
     console.log("Before: ", { ...data });
@@ -67,8 +82,11 @@ const Task = () => {
     data.numberOfAttachments = data.attachments?.length || 0;
     console.log("data.numberOfAttachments: ", data.numberOfAttachments);
     if (taskToEdit) {
+      console.log("filesToDelete: ", filesToDelete);
+      data.attachmentsToDelete = filesToDelete;
       data.updatedAt = new Date().toISOString();
       await taskService.updateTodo(data);
+      setFilesToDelete([]);
       setTaskToEdit(null);
     } else {
       data.completed = false;
@@ -86,6 +104,7 @@ const Task = () => {
 
   const [tasks, setTasks] = useState([]);
   const [persons, setPersons] = useState([]);
+  const [filesToDelete, setFilesToDelete] = useState([]);
   const [updateTaskList, setUpdateTaskList] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState(null);
   const [getTodosOverdue, setGetTodosOverdue] = useState(false);
@@ -255,18 +274,25 @@ const Task = () => {
                         {errors.attachments && errors.attachments.message}&nbsp;
                       </small>
                       <div className="input-group mb-3">
-                        <Controller // Controller is a React Component that takes propts, i.e. name, control, default value, rules, render.
+                        <Controller // Controller is a React Component that takes props, i.e. name, control, default value, rules, render.
                           // It provides more controll than register on what will be saved to formState.
                           name="attachments" // This will be the name for the Key in formState.
                           control={control} // Connects Controller with useForm, kind of the same function register has.
                           defaultValue={[]}
                           rules={{
-                            //Is the equivalent to validate in register.
+                            //Is the equivalent to validate in register. Files is an array of files that is given from Controller to this validate function.
                             validate: (files) => {
                               if (!files) return true; // no files → skips validation
                               // otherwise validation runs
-                              if (files.length > 5)
-                                return " can't have more than 5 files";
+                              const maxFilesWithName = 5;
+
+                              // Files that have name are real files from the input element, not metadata objects from backend
+                              const filesWithName = files.filter(
+                                (file) => "name" in file
+                              );
+
+                              if (filesWithName.length > maxFilesWithName)
+                                return " can't have more than 5 new files";
                               const maxMB = 2;
                               const tooLarge = files.some(
                                 (file) => file.size / 1024 / 1024 > maxMB
@@ -284,7 +310,7 @@ const Task = () => {
                               <input
                                 type="file"
                                 multiple
-                                ref={fileInputRef} //Connection to instance of useRef.
+                                ref={fileInputRef} //Connection to instance of useRef. useRef is used to directly access a DOM element. To delete the files in the input element after submitting the form.
                                 className="form-control"
                                 onChange={(e) => {
                                   const filesArray = Array.from(e.target.files);
@@ -297,6 +323,7 @@ const Task = () => {
       )}*/}
                               <button
                                 className="btn btn-outline-secondary"
+                                title="Close Preview"
                                 type="button"
                                 onClick={() => {
                                   console.log(
@@ -312,14 +339,14 @@ const Task = () => {
                         />
                       </div>
                       <div className="file-list" id="attachmentPreview">
-                        {attachmentsWatch?.length > 0 && (
+                        {attachmentsWatch?.length > 0 && ( // AttacmhmentsWatch is watching the attachments field in formState
                           <ul>
                             {attachmentsWatch.map((file, index) => (
                               <li
                                 key={index}
                                 className="list-group-item d-flex justify-content-between align-items-center"
                               >
-                                {/* Display either if it's a real file from the input or metadata from backend  */}
+                                {/* Display either if it's a real file from the input (has name) or metadata from backend (has fileName)  */}
                                 {"name" in file
                                   ? `${file.name} (${(
                                       file.size /
@@ -331,6 +358,25 @@ const Task = () => {
                                       1024 /
                                       1024
                                     ).toFixed(2)} MB)`}
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-outline-danger ms-2 mb-1"
+                                  onClick={() => {
+                                    // If it's an existing file from backend, add it to filesToDelete array to handle deletion when updating the task
+                                    if (!("name" in file)) {
+                                      setFilesToDelete((prev) => [
+                                        ...prev,
+                                        file,
+                                      ]);
+                                    }
+                                    const newFiles = attachmentsWatch.filter(
+                                      (_, i) => i !== index
+                                    ); // Removing the file with corresponding index from the array
+                                    setValue("attachments", newFiles); // Updating the attachments field in formState with the new array
+                                  }}
+                                >
+                                  <i className="bi bi-trash"></i>
+                                </button>
                               </li>
                             ))}
                           </ul>
@@ -778,17 +824,16 @@ const Task = () => {
                                     ? "In-progress"
                                     : "Pending..."}
                                 </span>
-                                </div>
-                                <div>
-                                  <span className="badge bg-secondary">
-                                    <i className="bi bi-paperclip me-1"></i>{" "}
-                                    {task.attachments
-                                      ? task.attachments.length
-                                      : 0}{" "}
-                                    attachment(s)
-                                  </span>
-                                </div>
-                              
+                              </div>
+                              <div>
+                                <span className="badge bg-secondary">
+                                  <i className="bi bi-paperclip me-1"></i>{" "}
+                                  {task.attachments
+                                    ? task.attachments.length
+                                    : 0}{" "}
+                                  attachment(s)
+                                </span>
+                              </div>
                             </div>
                             <div className="btn-group ms-3">
                               <button
